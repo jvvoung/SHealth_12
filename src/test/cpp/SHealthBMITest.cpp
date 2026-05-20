@@ -50,6 +50,9 @@ TEST(SHealthBmiTest, ImputeMissingWeightByDecade) {
 }
 
 TEST(SHealthBmiTest, ImputeMissingHeightByDecade) {
+    // Given: one valid height and one height=0 missing in 20s decade
+    // When:  DataImputer::imputeMissingValues then BmiCalculator::applyToAll
+    // Then:  missing height replaced by decade average (170.0), BMI matches peer
     std::vector<HealthRecord> records = {
         {1, 22, 70.0, 170.0, 0.0},
         {2, 23, 70.0, 0.0, 0.0},
@@ -63,6 +66,9 @@ TEST(SHealthBmiTest, ImputeMissingHeightByDecade) {
 }
 
 TEST(SHealthBmiTest, DecadeDistributionMatchesCategoryRatio) {
+    // Given: CSV with one Underweight and one Obesity in 20s decade
+    // When:  processFile then getDecadeDistribution(20)
+    // Then:  distribution array matches getCategoryRatio(20, category)
     const std::string path = writeTempCsv(
         "id,age,weight,height\n"
         "1,25,50,160\n"
@@ -79,6 +85,9 @@ TEST(SHealthBmiTest, DecadeDistributionMatchesCategoryRatio) {
 }
 
 TEST(SHealthBmiTest, OverallCategoryRatio) {
+    // Given: 3 users (Underweight, Obesity, Normal) across decades
+    // When:  processFile then getOverallDistribution
+    // Then:  four categories sum to ~100%, getOverallCategoryRatio matches array
     const std::string path = writeTempCsv(
         "id,age,weight,height\n"
         "1,25,50,160\n"
@@ -99,6 +108,9 @@ TEST(SHealthBmiTest, OverallCategoryRatio) {
 }
 
 TEST(SHealthBmiTest, NormalBmiUserIds) {
+    // Given: one Normal (18.5<BMI<23), one Obesity, one Underweight
+    // When:  processFile then getNormalBmiUserIds
+    // Then:  single Normal user id returned in processing order
     const std::string path = writeTempCsv(
         "id,age,weight,height\n"
         "101,25,60,170\n"

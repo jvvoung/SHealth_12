@@ -1,0 +1,26 @@
+[Age-decade BMI distribution]
+20 - underweight = 3.51, normal = 23.80, overweight = 11.83, obesity = 60.86
+30 - underweight = 1.86, normal = 15.53, overweight = 10.06, obesity = 72.55
+40 - underweight = 0.52, normal = 10.04, overweight = 9.13, obesity = 80.31
+50 - underweight = 2.18, normal = 12.63, overweight = 9.99, obesity = 75.20
+60 - underweight = 0.86, normal = 8.53, overweight = 10.64, obesity = 79.96
+70 - underweight = 0.53, normal = 12.35, overweight = 10.76, obesity = 76.37
+
+[Overall BMI distribution]
+  underweight = 1.60%
+  normal = 13.56%
+  overweight = 10.39%
+  obesity = 74.45%
+
+[Normal BMI users] count = 654
+  id = 93711
+  id = 93715
+  id = 93718
+  id = 93723
+  id = 93732
+  id = 93743
+  id = 93776
+  id = 93792
+  id = 93799
+  id = 93827
+  ... (644 more)

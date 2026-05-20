@@ -1,0 +1,180 @@
+# SHealth BMI — Cursor AI Rules
+
+## Project Context
+
+- **Purpose**: CSV(`id`, `age`, `weight`, `height`)에서 BMI를 계산하고, 연령대(20~70, 10년 단위)별·전체 저체중/정상/과체중/비만 비율을 산출한다.
+- **Stack**: C++17, CMake 3.10+, Google Test v1.14 (FetchContent 자동 다운로드)
+- **3차 리팩토링 완료 상태** — SRP 분리된 모듈 구조를 유지·확장한다.
+
+| Module | Responsibility |
+|--------|----------------|
+| `BmiTypes` | `HealthRecord`, `BmiCategory`, 상수 namespace |
+| `CsvReader` | CSV 로드·파싱·행 검증 |
+| `BmiCalculator` | BMI 계산·분류 |
+| `DataImputer` | 연령대별 weight/height 0 보정 |
+| `BmiStatistics` | 연령대/전체 비율, 정상 BMI 사용자 ID |
+| `SHealth` | 파사드 — `processFile`에서 위 컴포넌트 조율 |
+| `SHealthBMI.cpp` | `main`, 콘솔 출력 |
+
+```
+CMakeLists.txt
+shealth.dat
+src/main/cpp/   ← shealth_lib
+src/test/cpp/   ← SHealthBMITest.cpp
+Report/         ← 리팩토링 보고서 (참고용, 사용자 요청 없이 수정 금지)
+```
+
+참고 문서: `README.md`, `Report/1~3차_Refactoring_보고서.md`
+
+---
+
+## Domain Rules
+
+### BMI 계산
+- 공식: `weight(kg) / (height(m))²`
+- height 단위 변환: `PhysicalUnits::kCentimetersPerMeter` (100.0) 사용
+
+### BMI 분류 (경계값 포함, **단일 정의**: `BmiThresholds` + `BmiCalculator::classify`)
+| 범위 | Category |
+|------|----------|
+| ≤ 18.5 | `Underweight` |
+| 18.5 초과 ~ 23 미만 | `Normal` |
+| 23 이상 ~ 25 미만 | `Overweight` |
+| ≥ 25 | `Obesity` |
+
+**절대 규칙**: `BMI = 25.0` → 반드시 `Obesity`. 경계값 18.5, 23, 25 동작 변경 금지.
+
+### 결측 보정
+- `weight = 0` 또는 `height = 0` → 같은 연령대(10년 단위) 평균으로 대체
+- 결측 판별: `PhysicalUnits::kMissingValue` (0.0)
+
+### 통계 집계 제외
+- `height ≤ 0` 또는 `bmi ≤ 0` → 집계에서 제외
+- **0으로 나누기 금지** (height=0, 빈 연령대, sum=0 등 기존 방어 로직 유지)
+
+### 연령대
+- `AgeDecade::kMin(20)`, `kMax(70)`, `kStep(10)` — 20, 30, …, 70
+
+### HealthRecord 필드 (의미 변경 금지)
+- `id`, `age`, `weightKg`, `heightCm`, `bmi`
+
+### Public API 계약 (하위 호환 유지)
+- `processFile`: 성공 시 처리 건수(`int`), 실패 시 `-1`
+- 레거시: `getBmiRatio`, `SHealth::kType100~400` (`LegacyTypeCode` 위임), `computeBmi`/`classifyBmi` static
+- `categoryFromTypeCode(invalid)` → `std::nullopt`
+- `getBmiRatio(..., invalid typeCode)` → `0.0`
+- 신규 API는 `BmiCategory` enum 우선; `getBmiRatio(typeCode)`는 하위 호환용
+
+---
+
+## Architecture
+
+### SRP (Single Responsibility Principle)
+- I/O·파싱·보정·계산·통계·파사드 역할 **혼합 금지**
+- **God Class 재발 금지** — 새 로직은 적절한 클래스에 추가; `SHealth`는 조율(파사드)만
+- BMI 분류 if-else는 **`BmiCalculator::classify` 단일 진실 원천** — 다른 파일에 분산 정의 금지
+
+### 모듈별 제약
+- `DataImputer`: `imputeFieldByAgeDecade` **단일 구현** 유지 — 체중/키 중복 구현 금지
+- `BmiStatistics::compute`: **단일 패스 집계** 유지 — 불필요한 다중 full scan 금지
+- `CsvReader`: 컬럼 접근은 `CsvReader::Column` enum 사용
+
+### 상수·네이밍 (변경 시 일관 유지)
+| Namespace | 용도 |
+|-----------|------|
+| `BmiThresholds::` | BMI 임계값 (`kUnderweightMax` 등) |
+| `AgeDecade::` | 연령대 범위·인덱스 |
+| `LegacyTypeCode::` | 100/200/300/400 — **단일 정의만** |
+| `PhysicalUnits::` | 단위·결측·무효 BMI |
+| `StatisticsScale::` | 비율(%) 환산 |
+| `BmiCategoryMeta::` | 분류 개수·라벨 |
+
+- **매직 넘버 금지** — 기존 namespace 상수 재사용 또는 동일 패턴으로 추가
+- API 변경 시 기존 public API는 alias/위임으로 **하위 호환 유지**
+
+### CMake
+- 새 `.cpp`는 `shealth_lib`에 추가
+- include path: `src/main/cpp` 유지
+
+---
+
+## Testing
+
+### Framework & Format
+- Google Test: `TEST(SHealthBmiTest, ...)` 형식
+- Given-When-Then 구조를 **테스트명 또는 주석**으로 명시
+
+### 필수 워크플로
+- 리팩토링·기능 변경 **전후 `ctest` Green** 필수
+- 테스트 추가·수정 시 **기존 10건 TC 회귀 없어야 함**
+
+현재 10건 TC (회귀 기준):
+1. `ComputeBmi`
+2. `ClassifyBmiBoundaries`
+3. `ImputeMissingWeightByDecade`
+4. `ImputeMissingHeightByDecade`
+5. `DecadeDistributionMatchesCategoryRatio`
+6. `OverallCategoryRatio`
+7. `NormalBmiUserIds`
+8. `LegacyTypeCodeCompatibility`
+9. `InvalidTypeCodeReturnsZero`
+10. `SkipsInvalidRows`
+
+### 필수 경계값 TC (신규·수정 시 포함)
+- BMI: **18.5, 23, 25** (특히 `25.0 → Obesity`)
+- `height = 0`, `weight = 0` 보정
+- invalid type code → `nullopt` / `0.0`
+
+### CSV 테스트
+- 임시 파일(`writeTempCsv` 패턴) 또는 인메모리 문자열 사용
+
+---
+
+## Coding Style
+
+- C++17: `enum class`, `constexpr`, `std::optional`, `std::vector`, `std::array` 우선
+- 헤더: `#pragma once`, 구현 분리 (`.h` / `.cpp`)
+- 네이밍: PascalCase(클래스), camelCase(함수/변수), `k` prefix(상수)
+- 변경 범위 최소화 — 요청과 무관한 파일 수정 금지
+- `build/` 디렉터리·googletest 캐시는 **수정/커밋 대상 아님**
+
+---
+
+## Refactoring Workflow
+
+1. **테스트 Green 상태에서만** 리팩토링 진행
+2. **1차**: 네이밍·상수화·함수 추출·중복 제거
+3. **2차**: SRP 분리·기능 추가 (전체 비율, 정상 BMI ID, height 보정 등)
+4. **3차**: 잔여 스멸 제거 (type code 이중 정의, `DataImputer` 중복, `categoryFromTypeCode` 오류 처리)
+5. 각 단계 후 `ctest --output-on-failure`로 검증
+
+---
+
+## Do Not
+
+- BMI 분류 로직을 `BmiCalculator::classify` 외 파일에 분산 정의
+- `categoryFromTypeCode`가 invalid code에 임의 카테고리(예: `Underweight`) 반환
+- 고정 크기 C 배열·24개 ratio 멤버 등 **레거시 패턴 재도입**
+- `LegacyTypeCode` 이중 정의
+- `DataImputer` 체중/키 보정 로직 중복 구현
+- `BmiStatistics` 불필요한 다중 full scan
+- `README.md`, `Report/*.md` — **사용자 요청 없이 수정**
+- `git commit` / `git push` — **사용자 명시 요청 시에만**
+- `build/` 산출물·캐시 커밋
+
+---
+
+## Build Commands
+
+```bash
+# Configure & build
+mkdir build && cd build
+cmake ..
+cmake --build .
+
+# Test (from build/)
+ctest --output-on-failure
+
+# Run (from project root, shealth.dat 필요)
+.\build\Debug\SHealthBMI.exe
+```

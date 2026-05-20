@@ -1,28 +1,68 @@
 #include "SHealth.h"
+
 #include <cstdio>
+
+namespace {
+constexpr size_t kPreviewUserIdCount = 10;
+
+void printCategoryDistribution(const CategoryRatios& distribution, int decadeLabel = -1) {
+    if (decadeLabel >= 0) {
+        printf("%d - ", decadeLabel);
+    }
+
+    bool first = true;
+    for (BmiCategory category : BmiCategoryMeta::allCategories()) {
+        if (!first) {
+            printf(", ");
+        }
+        first = false;
+        printf("%s = %.2f", BmiCategoryMeta::categoryName(category),
+               distribution[static_cast<size_t>(categoryIndex(category))]);
+    }
+    printf("\n");
+}
+
+void printDecadeStatistics(const SHealth& shealth, int decade) {
+    printCategoryDistribution(shealth.getDecadeDistribution(decade), decade);
+}
+
+void printOverallStatistics(const SHealth& shealth) {
+    printf("\n[Overall BMI distribution]\n");
+    const CategoryRatios distribution = shealth.getOverallDistribution();
+    for (BmiCategory category : BmiCategoryMeta::allCategories()) {
+        printf("  %s = %.2f%%\n", BmiCategoryMeta::categoryName(category),
+               distribution[static_cast<size_t>(categoryIndex(category))]);
+    }
+}
+
+void printNormalBmiUsers(const SHealth& shealth) {
+    const std::vector<int> userIds = shealth.getNormalBmiUserIds();
+    printf("\n[Normal BMI users] count = %zu\n", userIds.size());
+    const size_t previewCount =
+        userIds.size() < kPreviewUserIdCount ? userIds.size() : kPreviewUserIdCount;
+    for (size_t i = 0; i < previewCount; ++i) {
+        printf("  id = %d\n", userIds[i]);
+    }
+    if (userIds.size() > previewCount) {
+        printf("  ... (%zu more)\n", userIds.size() - previewCount);
+    }
+}
+}  // namespace
 
 int main() {
     SHealth shealth;
-    shealth.calculateBmi("shealth.dat");
+    if (shealth.processFile("shealth.dat") < 0) {
+        return 1;
+    }
 
-    printf("20 - underweight = %f, normal = %f, overweight = %f, obesity = %f\n",
-           shealth.getBmiRatio(20, 100), shealth.getBmiRatio(20, 200),
-           shealth.getBmiRatio(20, 300), shealth.getBmiRatio(20, 400));
-    printf("30 - underweight = %f, normal = %f, overweight = %f, obesity = %f\n",
-           shealth.getBmiRatio(30, 100), shealth.getBmiRatio(30, 200),
-           shealth.getBmiRatio(30, 300), shealth.getBmiRatio(30, 400));
-    printf("40 - underweight = %f, normal = %f, overweight = %f, obesity = %f\n",
-           shealth.getBmiRatio(40, 100), shealth.getBmiRatio(40, 200),
-           shealth.getBmiRatio(40, 300), shealth.getBmiRatio(40, 400));
-    printf("50 - underweight = %f, normal = %f, overweight = %f, obesity = %f\n",
-           shealth.getBmiRatio(50, 100), shealth.getBmiRatio(50, 200),
-           shealth.getBmiRatio(50, 300), shealth.getBmiRatio(50, 400));
-    printf("60 - underweight = %f, normal = %f, overweight = %f, obesity = %f\n",
-           shealth.getBmiRatio(60, 100), shealth.getBmiRatio(60, 200),
-           shealth.getBmiRatio(60, 300), shealth.getBmiRatio(60, 400));
-    printf("70 - underweight = %f, normal = %f, overweight = %f, obesity = %f\n",
-           shealth.getBmiRatio(70, 100), shealth.getBmiRatio(70, 200),
-           shealth.getBmiRatio(70, 300), shealth.getBmiRatio(70, 400));
+    printf("[Age-decade BMI distribution]\n");
+    for (int decade = SHealth::kMinAgeDecade; decade <= SHealth::kMaxAgeDecade;
+         decade += SHealth::kAgeDecadeStep) {
+        printDecadeStatistics(shealth, decade);
+    }
+
+    printOverallStatistics(shealth);
+    printNormalBmiUsers(shealth);
 
     return 0;
 }

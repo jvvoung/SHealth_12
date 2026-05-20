@@ -1,0 +1,5 @@
+build/
+test_shealth_temp.csv
+*.user
+.vs/
+.idea/

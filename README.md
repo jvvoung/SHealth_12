@@ -63,9 +63,21 @@ build\Debug\SHealthBMI.exe   # Windows (Debug)
 
 ```bash
 cd build
-ctest
-# Windows Debug: ctest -C Debug
+ctest --output-on-failure
+# Windows Debug: ctest -C Debug --output-on-failure
 ```
+
+### Golden Master 회귀 (TC-25)
+
+`shealth.dat` 기준 `SHealthBMI` 콘솔 출력을 `test/golden/shealth_bmi_report.golden.txt`와 비교합니다.
+
+```bash
+ctest -R GoldenMaster --output-on-failure
+# 의도적 baseline 갱신 (로컬만)
+cmake --build build --target update-golden
+```
+
+상세: [docs/golden_master.md](docs/golden_master.md)
 
 ## 프로젝트 구조
 
@@ -73,17 +85,21 @@ ctest
 CMakeLists.txt
 shealth.dat
 bmi.png
-src/
-  main/cpp/
-    SHealthBMI.cpp      # main (CLI 진입점)
-    SHealth.h / .cpp    # 파사드 — 파일 처리·API 위임
-    BmiTypes.h / .cpp   # 도메인 타입·상수·분류 메타
-    CsvReader.h / .cpp  # CSV 로드 (Column enum)
-    DataImputer.h / .cpp # 결측(0) 체중·키 연령대 평균 보정
-    BmiCalculator.h / .cpp # BMI 계산·분류
-    BmiStatistics.h / .cpp # 연령대·전체 분포·비율 집계
-  test/cpp/
-    SHealthBMITest.cpp  # Google Test 단위 테스트
+src/main/cpp/
+  SHealthBMI.cpp      # main (CLI 진입점)
+  SHealth.h / .cpp    # 파사드 — 파일 처리·API 위임
+  BmiTypes.h / .cpp   # 도메인 타입·상수·분류 메타
+  CsvReader.h / .cpp  # CSV 로드 (Column enum)
+  DataImputer.h / .cpp # 결측(0) 체중·키 연령대 평균 보정
+  BmiCalculator.h / .cpp # BMI 계산·분류
+  BmiStatistics.h / .cpp # 연령대·전체 분포·비율 집계
+test/
+  cpp/
+    SHealthBMITest.cpp   # Google Test 단위 테스트
+    GoldenMasterTest.cpp # TC-25 골든 회귀 (SHealthBMI stdout)
+  golden/
+    shealth_bmi_report.golden.txt
+    actual/              # 실패 시 diff용 actual 저장
 Report/                 # 분석·리팩토링 보고서
 Prompting/              # Cursor AI용 프롬프트 Export
 docs/

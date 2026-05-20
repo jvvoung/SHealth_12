@@ -461,7 +461,7 @@ ctest -C Debug --output-on-failure
 ## 부록 A — 테스트 파일 구조 (권장)
 
 ```
-src/test/cpp/
+test/cpp/
   SHealthBMITest.cpp          # 기존 + 신규 TC
   test_helpers/
     TempCsv.h                 # writeTempCsv, Fixture (선택)

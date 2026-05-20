@@ -1,5 +1,8 @@
 build/
 test_shealth_temp.csv
+test_shealth_*.csv
+cmake_test_discovery*.json
+*_tests.cmake
 *.user
 .vs/
 .idea/

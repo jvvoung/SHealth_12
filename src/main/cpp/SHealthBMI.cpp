@@ -16,7 +16,7 @@ void printCategoryDistribution(const CategoryRatios& distribution, int decadeLab
             printf(", ");
         }
         first = false;
-        printf("%s = %f", BmiCategoryMeta::categoryName(category),
+        printf("%s = %.2f", BmiCategoryMeta::categoryName(category),
                distribution[static_cast<size_t>(categoryIndex(category))]);
     }
     printf("\n");
@@ -30,7 +30,7 @@ void printOverallStatistics(const SHealth& shealth) {
     printf("\n[Overall BMI distribution]\n");
     const CategoryRatios distribution = shealth.getOverallDistribution();
     for (BmiCategory category : BmiCategoryMeta::allCategories()) {
-        printf("  %s = %f%%\n", BmiCategoryMeta::categoryName(category),
+        printf("  %s = %.2f%%\n", BmiCategoryMeta::categoryName(category),
                distribution[static_cast<size_t>(categoryIndex(category))]);
     }
 }

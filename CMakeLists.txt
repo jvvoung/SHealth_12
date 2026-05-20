@@ -6,6 +6,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Main library
 add_library(shealth_lib
+    src/main/cpp/BmiTypes.cpp
+    src/main/cpp/CsvReader.cpp
+    src/main/cpp/BmiCalculator.cpp
+    src/main/cpp/DataImputer.cpp
+    src/main/cpp/BmiStatistics.cpp
     src/main/cpp/SHealth.cpp
 )
 target_include_directories(shealth_lib PUBLIC src/main/cpp)
